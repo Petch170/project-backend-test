@@ -1,0 +1,62 @@
+[
+  {
+    "userId": 2,
+    "activityType": "walking",
+    "durations": "1 hr",
+    "distance": "1.5 km"
+  },
+  {
+    "userId": 2,
+    "activityType": "cycling",
+    "durations": "3 hr",
+    "distance": "1.5 km"
+  },
+  {
+    "userId": 1,
+    "activityType": "running",
+    "durations": "1 hr",
+    "distance": "1.5 km"
+  },
+  {
+    "userId": 1,
+    "activityType": "running",
+    "durations": "1 hr",
+    "distance": "1.5 km"
+  },
+  {
+    "userId": 1,
+    "activityType": "walking",
+    "durations": "2 hr",
+    "distance": "1.5 km"
+  },
+  {
+    "userId": 1,
+    "activityType": "walking",
+    "durations": "2 hr",
+    "distance": "1.5 km"
+  },
+  {
+    "userId": 1,
+    "activityType": "cycling",
+    "durations": "1.5 hr",
+    "distance": "1.5 km"
+  },
+  {
+    "userId": 1,
+    "activityType": "cycling",
+    "durations": "1 hr",
+    "distance": "1.5 km"
+  },
+  {
+    "userId": 1,
+    "activityType": "badminton",
+    "durations": "1 hr",
+    "distance": ""
+  },
+  {
+    "userId": 1,
+    "activityType": "swimming",
+    "durations": "30 minute",
+    "distance": ""
+  }
+]
