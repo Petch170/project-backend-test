@@ -4,7 +4,7 @@ export const mockUserInfo = [
     fullName: "a",
     email: "a@email.com",
     phone: "123",
-    password: "",
+    password: "123456",
     imagePath: "",
   },
   {
@@ -12,7 +12,7 @@ export const mockUserInfo = [
     fullName: "b",
     email: "b@email.com",
     phone: "123",
-    password: "",
+    password: "123456",
     imagePath: "",
   },
 ];
