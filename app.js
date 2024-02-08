@@ -17,6 +17,7 @@ import { auth } from "./middlewares/auth.js";
 const HOSTNAME = process.env.SERVER_IP || "localhost";
 const PORT = process.env.SERVER_PORT || 8000;
 
+
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -151,7 +152,7 @@ app.patch(
 //   res.json({ data: [{ id: todoId, imagePath: `/uploads/${filename}`, name }] });
 // });
 
-
+//USERHOME-PAGE
 app.get("/post/",(req, res) => {
   try  {
     res.status(200).json(mockActivity);
@@ -163,7 +164,7 @@ app.get("/post/",(req, res) => {
 app.get("/post/:userId/",(req, res) => {
   const {userId} = req.params
   const postFilterbyUserId = mockActivity.filter((post) => post.userId === userId)
-  console.log(userId);
+ 
   try {
     res.status(200).json(postFilterbyUserId);
 } catch (err) {
@@ -172,285 +173,40 @@ app.get("/post/:userId/",(req, res) => {
 });
 
 
-app.post('/post', upload.single('imageUrl'), (req, res) => {
-  // Extract data from req.body
-  const { userId, profilepic, fullname, id, activityName, activityType, date, durations, distance, description } = req.body;
+app.post("/post/", upload.single("imageUrl"), uploadToCloudinary, async (req, res) => {
+  try {
+    const { userId, profilepic, fullname, activityName, activityType, date, durations, distance, description } = req.body;
+    
+    // Insert the new record into the database collection and capture the result
+    const insertResult = await databaseClient
+      .db()
+      .collection("user_card")
+      .insertOne({
+        userId: userId,
+        profilepic: profilepic,
+        fullname: fullname,
+        activityName: activityName,
+        activityType: activityType,
+        date: date,
+        durations: durations,
+        distance: distance,
+        description: description,
+        imageUrl: req.cloudinary.secure_url, // Assuming this holds the URL from Cloudinary upload
+      });
 
-  // Construct the new record
-  const newRecord = {
-    userId,
-    profilepic,
-    fullname,
-    id,
-    activityName,
-    activityType,
-    date,
-    durations,
-    distance,
-    description,
-    imageUrl: req.file ? req.file.path : null
-  };
-
-  mockActivity.push(newRecord);
-
-  console.log('New record added:', newRecord);
-
-  res.status(200).json({status: 'success', message: 'New record added successfully'});
+    // Check if the insertion was successful
+    if (insertResult.insertedCount === 1) {
+      res.status(200).send({ insertedId: insertResult.insertedId });
+    } else {
+      res.status(500).json({ error: "Failed to insert record into the database" });
+    }    
+    
+  } catch (error) {
+    console.error("Error creating new record:", error);
+    res.status(500).send("Internal Server Error");
+  }
 });
 
-app.post('/post', upload.single('imageUrl'), (req, res) => {
-  // Extract data from req.body
-  const { userId, profilepic, fullname, id, activityName, activityType, date, durations, distance, description } = req.body;
-
-  // Construct the new record
-  const newRecord = {
-    userId,
-    profilepic,
-    fullname,
-    id,
-    activityName,
-    activityType,
-    date,
-    durations,
-    distance,
-    description,
-    imageUrl: req.file ? req.file.path : null // Use the path of the uploaded file if available
-  };
-
-  // Push the new record to the mockData array
-  mockData.push(newRecord);
-
-  console.log('New record added:', newRecord);
-
-  // Respond with the added record
-  res.status(200).json(newRecord);
-});
-
-app.post('/post', upload.single('imageUrl'), (req, res) => {
-  // Extract data from req.body
-  const { userId, profilepic, fullname, id, activityName, activityType, date, durations, distance, description } = req.body;
-
-  // Construct the new record
-  const newRecord = {
-    userId,
-    profilepic,
-    fullname,
-    id,
-    activityName,
-    activityType,
-    date,
-    durations,
-    distance,
-    description,
-    imageUrl: req.file ? req.file.path : null // Use the path of the uploaded file if available
-  };
-
-  // Push the new record to the mockData array
-  mockData.push(newRecord);
-
-  console.log('New record added:', newRecord);
-
-  // Respond with the added record
-  res.status(200).json(newRecord);
-});
-
-app.post('/post', upload.single('imageUrl'), (req, res) => {
-  // Extract data from req.body
-  const { userId, profilepic, fullname, id, activityName, activityType, date, durations, distance, description } = req.body;
-
-  // Construct the new record
-  const newRecord = {
-    userId,
-    profilepic,
-    fullname,
-    id,
-    activityName,
-    activityType,
-    date,
-    durations,
-    distance,
-    description,
-    imageUrl: req.file ? req.file.path : null // Use the path of the uploaded file if available
-  };
-
-  // Push the new record to the mockData array
-  mockData.push(newRecord);
-
-  console.log('New record added:', newRecord);
-
-  // Respond with the added record
-  res.status(200).json(newRecord);
-});
-
-app.post('/post', upload.single('imageUrl'), (req, res) => {
-  // Extract data from req.body
-  const { userId, profilepic, fullname, id, activityName, activityType, date, durations, distance, description } = req.body;
-
-  // Construct the new record
-  const newRecord = {
-    userId,
-    profilepic,
-    fullname,
-    id,
-    activityName,
-    activityType,
-    date,
-    durations,
-    distance,
-    description,
-    imageUrl: req.file ? req.file.path : null // Use the path of the uploaded file if available
-  };
-
-  // Push the new record to the mockData array
-  mockData.push(newRecord);
-
-  console.log('New record added:', newRecord);
-
-  // Respond with the added record
-  res.status(200).json(newRecord);
-});
-
-app.post('/post', upload.single('imageUrl'), (req, res) => {
-  // Extract data from req.body
-  const { userId, profilepic, fullname, id, activityName, activityType, date, durations, distance, description } = req.body;
-
-  // Construct the new record
-  const newRecord = {
-    userId,
-    profilepic,
-    fullname,
-    id,
-    activityName,
-    activityType,
-    date,
-    durations,
-    distance,
-    description,
-    imageUrl: req.file ? req.file.path : null // Use the path of the uploaded file if available
-  };
-
-  // Push the new record to the mockData array
-  mockData.push(newRecord);
-
-  console.log('New record added:', newRecord);
-
-  // Respond with the added record
-  res.status(200).json(newRecord);
-});
-
-app.post('/post', upload.single('imageUrl'), (req, res) => {
-  // Extract data from req.body
-  const { userId, profilepic, fullname, id, activityName, activityType, date, durations, distance, description } = req.body;
-
-  // Construct the new record
-  const newRecord = {
-    userId,
-    profilepic,
-    fullname,
-    id,
-    activityName,
-    activityType,
-    date,
-    durations,
-    distance,
-    description,
-    imageUrl: req.file ? req.file.path : null // Use the path of the uploaded file if available
-  };
-
-  // Push the new record to the mockData array
-  mockData.push(newRecord);
-
-  console.log('New record added:', newRecord);
-
-  // Respond with the added record
-  res.status(200).json(newRecord);
-});
-
-app.post('/post', upload.single('imageUrl'), (req, res) => {
-  // Extract data from req.body
-  const { userId, profilepic, fullname, id, activityName, activityType, date, durations, distance, description } = req.body;
-
-  // Construct the new record
-  const newRecord = {
-    userId,
-    profilepic,
-    fullname,
-    id,
-    activityName,
-    activityType,
-    date,
-    durations,
-    distance,
-    description,
-    imageUrl: req.file ? req.file.path : null // Use the path of the uploaded file if available
-  };
-
-  // Push the new record to the mockData array
-  mockData.push(newRecord);
-
-  console.log('New record added:', newRecord);
-
-  // Respond with the added record
-  res.status(200).json(newRecord);
-});
-
-app.post('/post', upload.single('imageUrl'), (req, res) => {
-  // Extract data from req.body
-  const { userId, profilepic, fullname, id, activityName, activityType, date, durations, distance, description } = req.body;
-
-  // Construct the new record
-  const newRecord = {
-    userId,
-    profilepic,
-    fullname,
-    id,
-    activityName,
-    activityType,
-    date,
-    durations,
-    distance,
-    description,
-    imageUrl: req.file ? req.file.path : null // Use the path of the uploaded file if available
-  };
-
-  // Push the new record to the mockData array
-  mockData.push(newRecord);
-
-  console.log('New record added:', newRecord);
-
-  // Respond with the added record
-  res.status(200).json(newRecord);
-});
-
-app.post('/post', upload.single('imageUrl'), (req, res) => {
-  // Extract data from req.body
-  const { userId, profilepic, fullname, id, activityName, activityType, date, durations, distance, description } = req.body;
-
-  // Construct the new record
-  const newRecord = {
-    userId,
-    profilepic,
-    fullname,
-    id,
-    activityName,
-    activityType,
-    date,
-    durations,
-    distance,
-    description,
-    imageUrl: req.file ? req.file.path : null // Use the path of the uploaded file if available
-  };
-
-  // Push the new record to the mockData array
-  mockData.push(newRecord);
-
-  console.log('New record added:', newRecord);
-
-  // Respond with the added record
-  res.status(200).json(newRecord);
-});
-
-
-app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`);
+app.listen(PORT, () => {
+  console.log(`Example app listening on port ${PORT}`);
 });
