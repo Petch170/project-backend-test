@@ -10,6 +10,10 @@ import { v2 as cloudinary } from "cloudinary";
 import databaseClient from "./services/database.mjs";
 import { ObjectId } from "mongodb";
 import { auth } from "./middlewares/auth.js";
+import signupRoute from "./module/signup.js";
+import loginRoute from "./module/login.js";
+import getdata from "./module/getdata.js";
+
 
 const HOSTNAME = process.env.SERVER_IP || "localhost";
 const PORT = process.env.SERVER_PORT || 8000;
@@ -332,6 +336,14 @@ app.delete("/delete/post/:cardId", async (req, res) =>{
   }
 });
 
+
+app.post("/signup", signupRoute);
+
+app.post("/login" ,  loginRoute);
+
+app.post("/data" , getdata);
+
+app.get("/", (req, res) => {res.send("Hi")});
 
 
 
