@@ -14,7 +14,6 @@ import { auth } from "./middlewares/auth.js";
 const HOSTNAME = process.env.SERVER_IP || "localhost";
 const PORT = process.env.SERVER_PORT || 8000;
 
-
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -149,13 +148,138 @@ app.patch(
 //   res.json({ data: [{ id: todoId, imagePath: `/uploads/${filename}`, name }] });
 // });
 
+// mock login
+app.post("/mock/login", async (req, res) => {
+  const { email, password } = req.body;
+  const user = await databaseClient
+    .db()
+    .collection("user-info")
+    .findOne({ email: email });
 
+  // Fetch user from database
 
+  if (!user) {
+    return res
+      .status(400)
+      .send({ error: { message: "Invalid email or password" } });
+  }
+  // Check password
+  const validPassword = bcrypt.compareSync(password, user.password);
+  if (!validPassword) {
+    return res
+      .status(400)
+      .send({ error: { message: "Invalid email or password" } });
+  }
 
-
-
-
-
-app.listen(PORT, () => {
-  console.log(`Example app listening on port ${PORT}`);
+  res.send({ token: createJwt(email), userId: user._id });
 });
+
+function createJwt(email) {
+  const jwtSecretKey = process.env.JWT_SECRET_KEY;
+  const token = jwt.sign({ id: email }, jwtSecretKey, {
+    expiresIn: "1h",
+  });
+
+  return token;
+}
+
+//USERHOME-PAGE
+app.get("/post/", (req, res) => {
+  try {
+    res.status(200).json(mockActivity);
+  } catch (err) {
+    res.status(500).send(err);
+  }
+});
+
+app.get("/post/:userId/", (req, res) => {
+  const { userId } = req.params;
+  const postFilterbyUserId = mockActivity.filter(
+    (post) => post.userId === userId
+  );
+
+  try {
+    res.status(200).json(postFilterbyUserId);
+  } catch (err) {
+    res.status(500).send(err);
+  }
+});
+
+app.post(
+  "/post/",
+  upload.single("imageUrl"),
+  uploadToCloudinary,
+  async (req, res) => {
+    try {
+      const {
+        userId,
+        profilepic,
+        fullname,
+        activityName,
+        activityType,
+        date,
+        durations,
+        distance,
+        description,
+      } = req.body;
+
+      // Insert the new record into the database collection and capture the result
+      const insertResult = await databaseClient
+        .db()
+        .collection("user_card")
+        .insertOne({
+          userId: userId,
+          profilepic: profilepic,
+          fullname: fullname,
+          activityName: activityName,
+          activityType: activityType,
+          date: date,
+          durations: durations,
+          distance: distance,
+          description: description,
+          imageUrl: req.cloudinary.secure_url, // Assuming this holds the URL from Cloudinary upload
+        });
+      // console.log(insertResult);
+      // Check if the insertion was successful
+      if (insertResult.acknowledged === true) {
+        res.status(200).send({ insertedId: insertResult.insertedId });
+      } else {
+        res
+          .status(500)
+          .json({ error: "Failed to insert record into the database" });
+      }
+    } catch (error) {
+      console.error("Error creating new record:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  }
+);
+
+// app.listen(PORT, () => {
+//   console.log(`Example app listening on port ${PORT}`);
+// });
+
+// initilize web server
+const currentServer = app.listen(PORT, HOSTNAME, () => {
+  console.log(
+    `DATABASE IS CONNECTED: NAME => ${databaseClient.db().databaseName}`
+  );
+  console.log(`SERVER IS ONLINE => http://${HOSTNAME}:${PORT}`);
+});
+
+const cleanup = () => {
+  currentServer.close(() => {
+    console.log(
+      `DISCONNECT DATABASE: NAME => ${databaseClient.db().databaseName}`
+    );
+    try {
+      databaseClient.close();
+    } catch (error) {
+      console.error(error);
+    }
+  });
+};
+
+// cleanup connection such as database
+process.on("SIGTERM", cleanup);
+process.on("SIGINT", cleanup);
