@@ -337,11 +337,11 @@ app.delete("/delete/post/:cardId", async (req, res) =>{
 });
 
 
-app.post("/signup", signupRoute);
+app.post("/signup" , signupRoute);
 
-app.post("/login" ,  loginRoute);
+app.post("/login" , loginRoute);
 
-app.post("/data" , getdata);
+app.post("/data" , auth, getdata);
 
 app.get("/", (req, res) => {res.send("Hi")});
 

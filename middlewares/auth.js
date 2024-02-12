@@ -1,7 +1,6 @@
 import jwt from "jsonwebtoken";
 
 export const auth = (req, res, next) => {
-  // console.log(req.headers);
   const authHeader = req.headers.authorization;
   const jwtSecretKey = process.env.JWT_SECRET_KEY;
 
@@ -12,12 +11,12 @@ export const auth = (req, res, next) => {
   const token = authHeader.split(" ")[1]; // Get the token part after "Bearer"
 
   try {
-    // 🍎 Implement: 2.1. Use `jwt.verify(...)` to verify the token.
     const decoded = jwt.verify(token, jwtSecretKey);
     req.user = decoded;
     next();
   } catch (err) {
     console.log(err);
     res.status(400).json({ error: { message: "Invalid token." } });
+    throw err
   }
 };
