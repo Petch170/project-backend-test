@@ -8,9 +8,6 @@ import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 import { v2 as cloudinary } from "cloudinary";
 import databaseClient from "./services/database.mjs";
-import { mockUserActivity } from "./data/mockUserActivity.js";
-import { mockUserInfo } from "./data/mockUserInfo.js";
-import { mockActivity } from "./data/mockCard.js";
 import { ObjectId } from "mongodb";
 import { auth } from "./middlewares/auth.js";
 
@@ -152,39 +149,111 @@ app.patch(
 //   res.json({ data: [{ id: todoId, imagePath: `/uploads/${filename}`, name }] });
 // });
 
+
+
+
+
 //USERHOME-PAGE
-app.get("/post/",(req, res) => {
-  try  {
-    res.status(200).json(mockActivity);
-} catch (err) {
-    res.status(500).send(err);
-}
-});
-
-app.get("/post/:userId/",(req, res) => {
-  const {userId} = req.params
-  const postFilterbyUserId = mockActivity.filter((post) => post.userId === userId)
- 
+app.get("/post/", async (req, res) => {
   try {
-    res.status(200).json(postFilterbyUserId);
-} catch (err) {
+    const data = await databaseClient
+      .db()
+      .collection("user_card")
+      .find()
+      // Sort the data in descending order based on a timestamp field (assuming 'createdAt' field exists)
+      .sort({ createdAt: -1 })
+      .toArray();
+    res.status(200).json(data);
+  } catch (err) {
     res.status(500).send(err);
-}
+  }
 });
 
 
-app.post("/post/", upload.single("imageUrl"), uploadToCloudinary, async (req, res) => {
+
+//show user cards
+app.get("/post/:userId/", async (req, res) => {
+  const { userId } = req.params;
   try {
-    const { userId, profilepic, fullname, activityName, activityType, date, durations, distance, description } = req.body;
+    const data = await databaseClient
+    .db()
+    .collection("user_card")
+    .find({ userId: userId })
+    .sort({ createdAt: -1 })
+    .toArray();
+    if(data.length > 0) {
+      res.status(200).json(data);
+    }else {
+      res.status(404).json({message: 'User not found'});
+    }
     
+  }
+  catch (err) {
+    res.status(500).json(err);
+  }
+});
+
+//edit card
+app.put("/edit/post/:cardId", upload.single("imageUrl"), async (req, res) => {
+  const { cardId } = req.params;
+  const {  activityName, activityType, date, durations, distance, description, oldImageUrl } = req.body;
+
+  try {
+    let imageUrlToUpdate;
+
+    if (!req.file) {
+      imageUrlToUpdate = oldImageUrl;
+    } else {
+      await uploadToCloudinary(req, res, () => {}); // Call the middleware to upload the image to Cloudinary
+      imageUrlToUpdate = req.cloudinary.secure_url;
+    }
+
+    console.log(imageUrlToUpdate);
+
+    // Update the user document
+    const result = await databaseClient
+      .db()
+      .collection("user_card")
+      .findOneAndUpdate(
+        { _id: new ObjectId(cardId) },
+        {
+          $set: {
+            activityName: activityName,
+            activityType: activityType,
+            date: date,
+            durations: durations,
+            distance: distance,
+            description: description,
+            imageUrl: imageUrlToUpdate,
+          }
+        }
+      );
+
+    console.log(result);
+
+    if (!result) {
+      res.status(500).json({ message: "Failed to update user data" });
+    } else {
+      res.status(200).json({ message: "User data updated successfully" });
+    }
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+
+//create a new card
+app.post("/post/", upload.single("imageUrl"),uploadToCloudinary,  async (req, res) => {
+  try {
+    const { userId,  activityName, activityType, date, durations, distance, description } = req.body;
+    // Get the current timestamp
+    const createdAt = new Date();
     // Insert the new record into the database collection and capture the result
     const insertResult = await databaseClient
       .db()
       .collection("user_card")
       .insertOne({
         userId: userId,
-        profilepic: profilepic,
-        fullname: fullname,
         activityName: activityName,
         activityType: activityType,
         date: date,
@@ -192,11 +261,12 @@ app.post("/post/", upload.single("imageUrl"), uploadToCloudinary, async (req, re
         distance: distance,
         description: description,
         imageUrl: req.cloudinary.secure_url, // Assuming this holds the URL from Cloudinary upload
+        createdAt: createdAt, // Add the createdAt field
       });
 
     // Check if the insertion was successful
-    if (insertResult.insertedCount === 1) {
-      res.status(200).send({ insertedId: insertResult.insertedId });
+    if (insertResult.acknowledged === true) {
+      res.status(201).send({ insertedId: insertResult.insertedId });
     } else {
       res.status(500).json({ error: "Failed to insert record into the database" });
     }    
@@ -206,6 +276,34 @@ app.post("/post/", upload.single("imageUrl"), uploadToCloudinary, async (req, re
     res.status(500).send("Internal Server Error");
   }
 });
+
+
+//delete card
+app.delete("/delete/post/:cardId", async (req, res) =>{
+  const {cardId} = req.params;
+  try {
+    // Find and delete the user document
+    const result = await databaseClient
+
+      .db()
+      .collection("user_card")
+      .findOneAndDelete({ _id: new ObjectId(cardId) });
+       // Check if any document was deleted
+       console.log(result);
+      
+    if (result) {
+      res.status(200).json({ message: "User data deleted successfully" });
+    } else {
+      res.status(404).json({ message: "Card not found" });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+
+
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}`);
