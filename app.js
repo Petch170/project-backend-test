@@ -193,15 +193,45 @@ app.get("/post/", async (req, res) => {
     const data = await databaseClient
       .db()
       .collection("user_card")
-      .find()
-      // Sort the data in descending order based on a timestamp field (assuming 'createdAt' field exists)
-      .sort({ createdAt: -1 })
+      .aggregate([
+        {
+          $lookup: {
+            from: "members",
+            localField: "userId",
+            foreignField: "_id",
+            as: "userDetails"
+          }
+        },
+        {
+          $unwind: "$userDetails"
+        },
+        {
+          $project: {
+            _id: 1,
+            userId: 1,
+            activityName: 1,
+            activityType: 1,
+            date: 1,
+            durations: 1,
+            distance: 1,
+            description: 1,
+            imageUrl: 1,
+            createdAt: 1,
+            "userDetails.fullName": 1,
+            "userDetails.imagePath": 1
+          }
+        },
+        {
+          $sort: { createdAt: -1 }
+        }
+      ])
       .toArray();
     res.status(200).json(data);
   } catch (err) {
     res.status(500).send(err);
   }
 });
+
 
 
 
@@ -212,7 +242,7 @@ app.get("/post/:userId/", async (req, res) => {
     const data = await databaseClient
     .db()
     .collection("user_card")
-    .find({ userId: userId })
+    .find({ userId: ObjectId(userId) })
     .sort({ createdAt: -1 })
     .toArray();
     if(data.length > 0) {
@@ -287,7 +317,7 @@ app.post("/post/", upload.single("imageUrl"),uploadToCloudinary,  async (req, re
       .db()
       .collection("user_card")
       .insertOne({
-        userId: userId,
+        userId: new ObjectId(userId),
         activityName: activityName,
         activityType: activityType,
         date: date,
@@ -336,14 +366,52 @@ app.delete("/delete/post/:cardId", async (req, res) =>{
   }
 });
 
+//get user data using E-mail
+app.get("/user/data/:email", async (req, res) => {
+  const { email } = req.params;
 
-app.post("/signup" , signupRoute);
+  try {
+    const data = await databaseClient
+      .db()
+      .collection("members")
+      .aggregate([
+        { $match: { email: email } },
+        {
+          $project: {
+            userId: { $toString: "$_id" }, 
+            dob: 1,
+            email: 1,
+            fullName: 1,
+            gender: 1,
+            password: 1,
+            phoneNumber: 1,
+            typemem: 1,
+            imagePath: 1,
+          }
+        }
+      ])
+      .toArray();
+      console.log(data);
+    if (data.length > 0) {
+      res.status(200).json(data);
+    } else {
+      res.status(404).json({ message: 'User not found' });
+    }
 
-app.post("/login" , loginRoute);
+  } catch (err) {
+    res.status(500).json(err);
+  }
+});
 
-app.post("/data" , auth, getdata);
+app.post("/signup", signupRoute);
+
+app.post("/login" ,  loginRoute);
+
+app.post("/data" , getdata);
 
 app.get("/", (req, res) => {res.send("Hi")});
+
+
 
 
 
