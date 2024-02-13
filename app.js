@@ -10,6 +10,10 @@ import { v2 as cloudinary } from "cloudinary";
 import databaseClient from "./services/database.mjs";
 import { ObjectId } from "mongodb";
 import { auth } from "./middlewares/auth.js";
+import signupRoute from "./module/signup.js";
+import loginRoute from "./module/login.js";
+import getdata from "./module/getdata.js";
+
 
 const HOSTNAME = process.env.SERVER_IP || "localhost";
 const PORT = process.env.SERVER_PORT || 8000;
@@ -158,9 +162,38 @@ app.get("/post/", async (req, res) => {
     const data = await databaseClient
       .db()
       .collection("user_card")
-      .find()
-      // Sort the data in descending order based on a timestamp field (assuming 'createdAt' field exists)
-      .sort({ createdAt: -1 })
+      .aggregate([
+        {
+          $lookup: {
+            from: "members",
+            localField: "userId",
+            foreignField: "_id",
+            as: "userDetails"
+          }
+        },
+        {
+          $unwind: "$userDetails"
+        },
+        {
+          $project: {
+            _id: 1,
+            userId: 1,
+            activityName: 1,
+            activityType: 1,
+            date: 1,
+            durations: 1,
+            distance: 1,
+            description: 1,
+            imageUrl: 1,
+            createdAt: 1,
+            "userDetails.fullName": 1,
+            "userDetails.imagePath": 1
+          }
+        },
+        {
+          $sort: { createdAt: -1 }
+        }
+      ])
       .toArray();
     res.status(200).json(data);
   } catch (err) {
@@ -168,17 +201,20 @@ app.get("/post/", async (req, res) => {
   }
 });
 
+
+
+
 //show user cards
 app.get("/post/:userId/", async (req, res) => {
   const { userId } = req.params;
   try {
     const data = await databaseClient
-      .db()
-      .collection("user_card")
-      .find({ userId: userId })
-      .sort({ createdAt: -1 })
-      .toArray();
-    if (data.length > 0) {
+    .db()
+    .collection("user_card")
+    .find({ userId: ObjectId(userId) })
+    .sort({ createdAt: -1 })
+    .toArray();
+    if(data.length > 0) {
       res.status(200).json(data);
     } else {
       res.status(404).json({ message: "User not found" });
@@ -245,38 +281,26 @@ app.put("/edit/post/:cardId", upload.single("imageUrl"), async (req, res) => {
 });
 
 //create a new card
-app.post(
-  "/post/",
-  upload.single("imageUrl"),
-  uploadToCloudinary,
-  async (req, res) => {
-    try {
-      const {
-        userId,
-        activityName,
-        activityType,
-        date,
-        durations,
-        distance,
-        description,
-      } = req.body;
-      // Get the current timestamp
-      const createdAt = new Date();
-      // Insert the new record into the database collection and capture the result
-      const insertResult = await databaseClient
-        .db()
-        .collection("user_card")
-        .insertOne({
-          userId: userId,
-          activityName: activityName,
-          activityType: activityType,
-          date: date,
-          durations: durations,
-          distance: distance,
-          description: description,
-          imageUrl: req.cloudinary.secure_url, // Assuming this holds the URL from Cloudinary upload
-          createdAt: createdAt, // Add the createdAt field
-        });
+app.post("/post/", upload.single("imageUrl"),uploadToCloudinary,  async (req, res) => {
+  try {
+    const { userId,  activityName, activityType, date, durations, distance, description } = req.body;
+    // Get the current timestamp
+    const createdAt = new Date();
+    // Insert the new record into the database collection and capture the result
+    const insertResult = await databaseClient
+      .db()
+      .collection("user_card")
+      .insertOne({
+        userId: new ObjectId(userId),
+        activityName: activityName,
+        activityType: activityType,
+        date: date,
+        durations: durations,
+        distance: distance,
+        description: description,
+        imageUrl: req.cloudinary.secure_url, // Assuming this holds the URL from Cloudinary upload
+        createdAt: createdAt, // Add the createdAt field
+      });
 
       // Check if the insertion was successful
       if (insertResult.acknowledged === true) {
@@ -316,6 +340,60 @@ app.delete("/delete/post/:cardId", async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
+
+//get user data using E-mail
+app.get("/user/data/:email", async (req, res) => {
+  const { email } = req.params;
+
+  try {
+    const data = await databaseClient
+      .db()
+      .collection("members")
+      .aggregate([
+        { $match: { email: email } },
+        {
+          $project: {
+            userId: { $toString: "$_id" }, 
+            dob: 1,
+            email: 1,
+            fullName: 1,
+            gender: 1,
+            password: 1,
+            phoneNumber: 1,
+            typemem: 1,
+            imagePath: 1,
+          }
+        }
+      ])
+      .toArray();
+      console.log(data);
+    if (data.length > 0) {
+      res.status(200).json(data);
+    } else {
+      res.status(404).json({ message: 'User not found' });
+    }
+
+  } catch (err) {
+    res.status(500).json(err);
+  }
+});
+
+app.post("/signup", signupRoute);
+
+app.post("/login" ,  loginRoute);
+
+app.post("/data" , getdata);
+
+app.get("/", (req, res) => {res.send("Hi")});
+
+
+
+
+
+
+// app.listen(PORT, () => {
+//   console.log(`Example app listening on port ${PORT}`);
+// });
 
 // initilize web server
 const currentServer = app.listen(PORT, HOSTNAME, () => {
