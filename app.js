@@ -13,6 +13,9 @@ import { auth } from "./middlewares/auth.js";
 import signupRoute from "./module/signup.js";
 import loginRoute from "./module/login.js";
 import getdata from "./module/getdata.js";
+import getemailRoute from "./module/getemail.js";
+import changpassword from "./module/updatepassword.js";
+
 
 const HOSTNAME = process.env.SERVER_IP || "localhost";
 const PORT = process.env.SERVER_PORT || 8000;
@@ -219,19 +222,59 @@ app.get("/post/", async (req, res) => {
 app.get("/post/:userId/", async (req, res) => {
   const { userId } = req.params;
   try {
+    // Check if userId is a valid ObjectId
+    if (!ObjectId.isValid(userId)) {
+      return res.status(400).json({ error: "Invalid userId format" });
+    }
+    
     const data = await databaseClient
       .db()
       .collection("user_card")
-      .find({ userId: ObjectId(userId) })
-      .sort({ createdAt: -1 })
+      .aggregate([
+        {
+          $match:{ userId: new ObjectId(userId) } 
+        },
+        {
+          $lookup: {
+            from: "members",
+            localField: "userId",
+            foreignField: "_id",
+            as: "userDetails"
+          }
+        },
+        {
+          $unwind: "$userDetails"
+        },
+        {
+          $project: {
+            _id: 1,
+            userId: 1,
+            activityName: 1,
+            activityType: 1,
+            date: 1,
+            durations: 1,
+            distance: 1,
+            description: 1,
+            imageUrl: 1,
+            createdAt: 1,
+            "userDetails.fullName": 1,
+            "userDetails.imagePath": 1
+          }
+        },
+        {
+          $sort: { createdAt: -1 }
+        }
+      ])
       .toArray();
-    if (data.length > 0) {
-      res.status(200).json(data);
+      
+    if (data.length === 0) {
+      res.status(404).json({ error: "No data found for the provided userId" });
     } else {
-      res.status(404).json({ message: "User not found" });
+      res.status(200).json(data);
     }
   } catch (err) {
-    res.status(500).json(err);
+    console.error(err);
+    res.status(500).json({ error: "An error occurred while processing your request" });
   }
 });
 
@@ -389,7 +432,6 @@ app.get("/user/data/:email", async (req, res) => {
         },
       ])
       .toArray();
-    console.log(data);
     if (data.length > 0) {
       res.status(200).json(data);
     } else {
@@ -404,7 +446,11 @@ app.post("/signup", signupRoute);
 
 app.post("/login", loginRoute);
 
-app.post("/data", getdata);
+app.post("/data" , getdata);
+
+app.get("/api", getemailRoute);
+
+app.post("/updatepassword", changpassword)
 
 app.get("/", (req, res) => {
   res.send("Hi");
