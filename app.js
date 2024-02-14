@@ -14,7 +14,6 @@ import signupRoute from "./module/signup.js";
 import loginRoute from "./module/login.js";
 import getdata from "./module/getdata.js";
 
-
 const HOSTNAME = process.env.SERVER_IP || "localhost";
 const PORT = process.env.SERVER_PORT || 8000;
 
@@ -49,7 +48,7 @@ app.get("/user/activity/:userId", auth, async (req, res) => {
   try {
     const userData = await databaseClient
       .db()
-      .collection("user-activity")
+      .collection("user_card")
       .find({ userId: new ObjectId(userId) })
       .toArray();
     res.status(200).json({ count: userData.length, data: userData });
@@ -63,8 +62,23 @@ app.get("/user/info/:userId", auth, async (req, res) => {
   try {
     const userData = await databaseClient
       .db()
-      .collection("user-info")
+      .collection("members")
       .find({ _id: new ObjectId(userId) })
+      .project({ password: 0 })
+      .toArray();
+    res.status(200).json({ data: userData });
+  } catch (error) {
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+app.get("/user/info/email/:email", auth, async (req, res) => {
+  const { email } = req.params;
+  try {
+    const userData = await databaseClient
+      .db()
+      .collection("members")
+      .find({ email: email })
       .project({ password: 0 })
       .toArray();
     res.status(200).json({ data: userData });
@@ -81,7 +95,7 @@ app.post("/user/changePassword/:userId", auth, async (req, res) => {
   try {
     await databaseClient
       .db()
-      .collection("user-info")
+      .collection("members")
       .updateOne(
         { _id: new ObjectId(userId) },
         { $set: { password: hashedPassword } }
@@ -103,14 +117,14 @@ app.patch(
     try {
       await databaseClient
         .db()
-        .collection("user-info")
+        .collection("members")
         .updateOne(
           { _id: new ObjectId(userId) },
           {
             $set: {
               fullName: name,
               email: email,
-              phone: phoneNumber,
+              phoneNumber: phoneNumber,
               imagePath: req.cloudinary.secure_url,
             },
           }
@@ -168,11 +182,11 @@ app.get("/post/", async (req, res) => {
             from: "members",
             localField: "userId",
             foreignField: "_id",
-            as: "userDetails"
-          }
+            as: "userDetails",
+          },
         },
         {
-          $unwind: "$userDetails"
+          $unwind: "$userDetails",
         },
         {
           $project: {
@@ -187,12 +201,12 @@ app.get("/post/", async (req, res) => {
             imageUrl: 1,
             createdAt: 1,
             "userDetails.fullName": 1,
-            "userDetails.imagePath": 1
-          }
+            "userDetails.imagePath": 1,
+          },
         },
         {
-          $sort: { createdAt: -1 }
-        }
+          $sort: { createdAt: -1 },
+        },
       ])
       .toArray();
     res.status(200).json(data);
@@ -201,20 +215,17 @@ app.get("/post/", async (req, res) => {
   }
 });
 
-
-
-
 //show user cards
 app.get("/post/:userId/", async (req, res) => {
   const { userId } = req.params;
   try {
     const data = await databaseClient
-    .db()
-    .collection("user_card")
-    .find({ userId: ObjectId(userId) })
-    .sort({ createdAt: -1 })
-    .toArray();
-    if(data.length > 0) {
+      .db()
+      .collection("user_card")
+      .find({ userId: ObjectId(userId) })
+      .sort({ createdAt: -1 })
+      .toArray();
+    if (data.length > 0) {
       res.status(200).json(data);
     } else {
       res.status(404).json({ message: "User not found" });
@@ -281,26 +292,38 @@ app.put("/edit/post/:cardId", upload.single("imageUrl"), async (req, res) => {
 });
 
 //create a new card
-app.post("/post/", upload.single("imageUrl"),uploadToCloudinary,  async (req, res) => {
-  try {
-    const { userId,  activityName, activityType, date, durations, distance, description } = req.body;
-    // Get the current timestamp
-    const createdAt = new Date();
-    // Insert the new record into the database collection and capture the result
-    const insertResult = await databaseClient
-      .db()
-      .collection("user_card")
-      .insertOne({
-        userId: new ObjectId(userId),
-        activityName: activityName,
-        activityType: activityType,
-        date: date,
-        durations: durations,
-        distance: distance,
-        description: description,
-        imageUrl: req.cloudinary.secure_url, // Assuming this holds the URL from Cloudinary upload
-        createdAt: createdAt, // Add the createdAt field
-      });
+app.post(
+  "/post/",
+  upload.single("imageUrl"),
+  uploadToCloudinary,
+  async (req, res) => {
+    try {
+      const {
+        userId,
+        activityName,
+        activityType,
+        date,
+        durations,
+        distance,
+        description,
+      } = req.body;
+      // Get the current timestamp
+      const createdAt = new Date();
+      // Insert the new record into the database collection and capture the result
+      const insertResult = await databaseClient
+        .db()
+        .collection("user_card")
+        .insertOne({
+          userId: new ObjectId(userId),
+          activityName: activityName,
+          activityType: activityType,
+          date: date,
+          durations: durations,
+          distance: distance,
+          description: description,
+          imageUrl: req.cloudinary.secure_url, // Assuming this holds the URL from Cloudinary upload
+          createdAt: createdAt, // Add the createdAt field
+        });
 
       // Check if the insertion was successful
       if (insertResult.acknowledged === true) {
@@ -353,7 +376,7 @@ app.get("/user/data/:email", async (req, res) => {
         { $match: { email: email } },
         {
           $project: {
-            userId: { $toString: "$_id" }, 
+            userId: { $toString: "$_id" },
             dob: 1,
             email: 1,
             fullName: 1,
@@ -362,17 +385,16 @@ app.get("/user/data/:email", async (req, res) => {
             phoneNumber: 1,
             typemem: 1,
             imagePath: 1,
-          }
-        }
+          },
+        },
       ])
       .toArray();
-      console.log(data);
+    console.log(data);
     if (data.length > 0) {
       res.status(200).json(data);
     } else {
-      res.status(404).json({ message: 'User not found' });
+      res.status(404).json({ message: "User not found" });
     }
-
   } catch (err) {
     res.status(500).json(err);
   }
@@ -380,16 +402,13 @@ app.get("/user/data/:email", async (req, res) => {
 
 app.post("/signup", signupRoute);
 
-app.post("/login" ,  loginRoute);
+app.post("/login", loginRoute);
 
-app.post("/data" , getdata);
+app.post("/data", getdata);
 
-app.get("/", (req, res) => {res.send("Hi")});
-
-
-
-
-
+app.get("/", (req, res) => {
+  res.send("Hi");
+});
 
 // app.listen(PORT, () => {
 //   console.log(`Example app listening on port ${PORT}`);
