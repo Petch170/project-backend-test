@@ -13,6 +13,8 @@ import { auth } from "./middlewares/auth.js";
 import signupRoute from "./module/signup.js";
 import loginRoute from "./module/login.js";
 import getdata from "./module/getdata.js";
+import getemailRoute from "./module/getemail.js";
+import changpassword from "./module/updatepassword.js";
 
 
 const HOSTNAME = process.env.SERVER_IP || "localhost";
@@ -408,6 +410,10 @@ app.post("/signup", signupRoute);
 app.post("/login" ,  loginRoute);
 
 app.post("/data" , getdata);
+
+app.get("/api", getemailRoute);
+
+app.post("/updatepassword", changpassword)
 
 app.get("/", (req, res) => {res.send("Hi")});
 
