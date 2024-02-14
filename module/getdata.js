@@ -1,5 +1,6 @@
 import databaseClient from "../services/database.mjs";
-import { checkMissingField } from "../utils/requestUtils.js";import dotenv from "dotenv";
+import { checkMissingField } from "../utils/requestUtils.js";
+import dotenv from "dotenv";
 import cors from "cors";
 import express, { response } from "express";
 

@@ -15,18 +15,20 @@ const loginRoute = async (req, res) => {
     LOGIN_DATA_KEYS,
     body
   );
-  // console.log(body);
-  // res.send(body);
+
+
 
   if (!isBodyChecked) {
     res.send(`Missing Fields: ${"".concat(missingFields)}`);
     return;
   }
 
+
   const user = await databaseClient
     .db()
     .collection("members")
     .findOne({ email: body.email });
+
   if (user === null) {
     res.send("User or Password invalid");
     return;
@@ -37,9 +39,16 @@ const loginRoute = async (req, res) => {
     return;
   }
 
+  const id = user._id;
+  const idString = id.toString();
+  const userId = idString.substring(0, 24);
+  const email = user.email;
+  const sum = {userId,email}
+
+  // console.log(sum);
 
   // Generate JWT token
-  const token = createJwt(body.email);
+  const token = createJwt(sum);
   
   // Send response with token and body
   res.json({ token });
@@ -48,7 +57,7 @@ const loginRoute = async (req, res) => {
 // Function to create JWT token
 function createJwt(email) {
   const jwtSecretKey = process.env.JWT_SECRET_KEY;
-  const data = { email: email };
+  const data = { data: email };
   const token = jwt.sign(data, jwtSecretKey, {
     expiresIn: "7d",
   });
